@@ -1,0 +1,16 @@
+# Local source material and working notes; intentionally not published.
+/docs/
+
+# Runtime and editor artifacts
+.env
+.venv/
+__pycache__/
+*.pyc
+*.log
+*.pid
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+*~
