@@ -103,11 +103,67 @@ The profile will classify packages rather than maintain one opaque list:
 Each group will be declared once and tested for idempotent installation and
 profile-only upgrades.
 
+## Utility ownership and updates
+
+The following profiles are now declared in `config/package-profile.sh`:
+
+| Profile | Examples | Installed by | Updated by |
+| --- | --- | --- | --- |
+| Base | `curl`, `wget`, `nano`, archives, certificates | `02-setup-ubuntu-base.sh` | `03-update-ubuntu-profile.sh` if already installed |
+| Development | compiler toolchain, CMake, Ninja, Python, Git, GDB | `02-setup-ubuntu-base.sh` | `03-update-ubuntu-profile.sh` if already installed |
+| Network | `iproute2`, DNS tools, `netcat-openbsd`, `socat`, `mtr-tiny`, SSH and rsync | `02-setup-ubuntu-base.sh` | `03-update-ubuntu-profile.sh` if already installed |
+| Analysis | `nmap`, `lsof`, `strace`, `sysstat`, `htop`, `ncdu` | `02-setup-ubuntu-base.sh` | `03-update-ubuntu-profile.sh` if already installed |
+| AI workflow | `ripgrep`, `fd-find`, `fzf`, `jq`, `tmux`, `shellcheck`, `shfmt` | `02-setup-ubuntu-base.sh` | `03-update-ubuntu-profile.sh` if already installed |
+
+`nmap` and `netcat-openbsd` are included for authorized diagnostics of systems
+you own or are permitted to test. The project never runs scans automatically.
+The AI-workflow profile deliberately provides inspection and quality tools, not
+an opinionated AI provider or a deprecated CLI.
+
+The setup script uses normal `apt-get install`, so it installs missing profile
+packages and obtains the newest version offered by the configured Ubuntu
+repositories. The updater instead uses `apt-get install --only-upgrade` over
+the already-installed packages in the same manifest. Therefore it does not add
+new utilities, recreate Ubuntu, or silently perform a whole-system upgrade.
+
+## Stable development suite
+
+In addition to the Ubuntu package profile, setup and update manage three
+upstream stable runtimes:
+
+| Runtime | Setup | Update path |
+| --- | --- | --- |
+| Python | Astral `uv` plus its latest stable managed Python | `uv self update` and `uv python upgrade` |
+| Node.js | NodeSource Node LTS repository and `nodejs` package | Refresh Node LTS repository then APT update |
+| Go | Latest stable Linux archive selected from Go's official JSON feed | Downloaded archive with official SHA-256 verification; previous versions remain available under `/opt` |
+
+Rust is deliberately excluded because the target is Termux/Ubuntu PRoot and it
+requires an environment-specific compatibility decision. PHP and Java are not
+part of this suite. The updater makes no attempt to install an AI provider or
+CLI; it provides neutral tooling for any agent instead.
+
+The runtime installers use HTTPS and official distribution endpoints. Go is
+verified against the checksum supplied by its official release feed. NodeSource
+configures a signed APT repository; uv uses its supported standalone installer.
+
+## Operational controls
+
+The Ubuntu setup and updater take an exclusive lock, require at least 1 GiB of
+free space, and use a bounded APT lock timeout. Each run writes a log under
+`/var/log/termux-ubuntu-bootstrap/`; only the five newest logs per operation
+are retained. Steps continue independently where safe, and a non-zero final
+status includes a concise summary of every failed or skipped step with the log
+path for diagnosis.
+
 ## Safety model
 
 - Run the bootstrap script from Termux.
 - Run the base setup and updater from the Ubuntu PRoot as root.
 - `--fresh` is the only mode allowed to remove an existing Ubuntu rootfs.
+- Before installing Ubuntu, bootstrap requires at least 4 GiB usable storage
+  while retaining a 20% free-space reserve.
+- A rootfs that exists but cannot start is reported as damaged; it is never
+  replaced unless `--fresh` is explicitly confirmed.
 - Network checks must use HTTPS and report a useful failure.
 - Package upgrades must be explicit, non-interactive, and limited to the
   declared profile unless a future full-system mode is added.
