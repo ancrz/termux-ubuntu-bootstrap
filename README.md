@@ -1,10 +1,47 @@
 # termux-ubuntu-bootstrap
 
-Bootstrap a minimal, reproducible Ubuntu PRoot environment from Termux, then
-layer a maintained profile of command-line, network, and development utilities
-on top. The project is deliberately split into small scripts so provisioning,
-daily package maintenance, and destructive recovery never become the same
-operation.
+[![Shell](https://img.shields.io/badge/shell-Bash-4EAA25?logo=gnubash&logoColor=white)](#script-layers-and-flow)
+[![Termux](https://img.shields.io/badge/host-Termux-111111?logo=android&logoColor=white)](#script-layers-and-flow)
+[![Ubuntu](https://img.shields.io/badge/guest-Ubuntu%20PRoot-E95420?logo=ubuntu&logoColor=white)](#script-layers-and-flow)
+[![APT](https://img.shields.io/badge/packages-APT-A80030?logo=debian&logoColor=white)](#utility-ownership-and-updates)
+[![Node.js](https://img.shields.io/badge/runtime-Node.js%20LTS-339933?logo=nodedotjs&logoColor=white)](#stable-development-suite)
+[![Python](https://img.shields.io/badge/runtime-Python%20via%20uv-3776AB?logo=python&logoColor=white)](#stable-development-suite)
+[![Go](https://img.shields.io/badge/runtime-Go%20stable-00ADD8?logo=go&logoColor=white)](#stable-development-suite)
+
+**A layered Bash bootstrapper for a stable, terminal-only Ubuntu development
+environment inside Termux.** It separates the Android/Termux host from the
+Ubuntu PRoot guest: one script provisions the boundary, while the Ubuntu
+scripts install and maintain an explicit, reproducible tool profile.
+
+## Script layers and flow
+
+```mermaid
+flowchart LR
+    subgraph A[Android device]
+        subgraph T[Termux host layer]
+            S1[01 · bootstrap\nTermux + proot-distro]
+            R[Ubuntu rootfs]
+            S1 -->|provisions or reuses| R
+        end
+        subgraph U[Ubuntu PRoot guest layer]
+            S2[02 · setup\nprofile + stable runtimes]
+            P[(Declared package profile)]
+            S3[03 · updater\nprofile + runtimes]
+            R -->|proot-distro login ubuntu| S2
+            S2 -->|installs missing packages| P
+            P --> S3
+            S3 -->|updates installed packages| P
+        end
+    end
+
+    S2 --> D[Ready development shell]
+    S3 --> D
+```
+
+The abstraction boundary is intentional: Termux owns `pkg`, storage checks,
+`proot-distro`, and the Ubuntu rootfs. Ubuntu owns `apt`, the declared utility
+profile, and stable development runtimes. No Ubuntu script changes Termux; no
+normal Termux run replaces Ubuntu.
 
 ## Why this exists
 
@@ -20,24 +57,32 @@ an explicit automation contract:
 It targets a terminal-only environment. Graphical desktops, unrelated runtime
 managers, and AI CLIs are intentionally outside its baseline.
 
-## Status
-
-This repository is being built from three previously functional local scripts.
-The initial commit establishes the public repository contract and branch model;
-the scripts will be refactored in subsequent commits without publishing the
-original local references.
-
-## Planned architecture
+## Scripts
 
 | Layer | Responsibility | Safety contract |
 | --- | --- | --- |
-| `01-bootstrap-termux-ubuntu.sh` | Install `proot-distro` and provision Ubuntu | Never replaces an existing Ubuntu unless invoked with `--fresh`. |
-| `02-setup-ubuntu-base.sh` | Reconcile a declared profile of base, development, and network utilities | Installs only missing packages and upgrades the declared profile. |
-| `03-update-ubuntu-profile.sh` | Refresh the packages already managed by the profile | Does not reinstall Ubuntu or add unrelated runtimes. |
+| `01-bootstrap-termux-ubuntu.sh` | Install `proot-distro` and provision Ubuntu | Runs in Termux; never replaces an existing Ubuntu unless invoked with `--fresh`. |
+| `02-setup-ubuntu-base.sh` | Reconcile a declared profile of base, development, and network utilities | Runs as root in Ubuntu PRoot; installs missing profile packages and stable runtimes. |
+| `03-update-ubuntu-profile.sh` | Refresh the packages and runtimes already managed by the profile | Runs as root in Ubuntu PRoot; does not reinstall Ubuntu or add unrelated APT packages. |
 
-The package profile will be shared by layers 2 and 3 so that they cannot drift.
-The updater will manage distribution packages only; deprecated AI CLI setup from
-the legacy maintenance script is intentionally out of scope.
+Layers 2 and 3 share `config/package-profile.sh`, which keeps their APT
+ownership aligned. Deprecated AI-CLI setup remains outside the project; the
+suite provides neutral tools that support any authorized AI-assisted workflow.
+
+### Quick start
+
+```bash
+# In Termux: install or reuse Ubuntu.
+./scripts/01-bootstrap-termux-ubuntu.sh
+
+# Only when intentionally replacing a damaged or obsolete rootfs.
+./scripts/01-bootstrap-termux-ubuntu.sh --fresh --yes
+
+# Inside Ubuntu PRoot, as root: create the development suite, then maintain it.
+proot-distro login ubuntu
+./scripts/02-setup-ubuntu-base.sh
+./scripts/03-update-ubuntu-profile.sh
+```
 
 ## Automation flow
 
@@ -87,7 +132,7 @@ opt-in command.
 | Base setup | Ubuntu PRoot as root | Packages in the declared profile | Install undeclared runtimes or CLIs |
 | Profile updater | Ubuntu PRoot as root | Available upgrades for profile packages | Reinstall Ubuntu or perform an implicit full-system upgrade |
 
-## Planned package groups
+## Package groups
 
 The profile will classify packages rather than maintain one opaque list:
 
@@ -100,8 +145,8 @@ The profile will classify packages rather than maintain one opaque list:
 - **Operations:** terminal multiplexing, disk/process visibility and safe
   transfer utilities.
 
-Each group will be declared once and tested for idempotent installation and
-profile-only upgrades.
+Each group is declared once and checked by `tests/profile-consistency.sh` for
+profile consistency and duplicate package ownership.
 
 ## Utility ownership and updates
 
@@ -168,13 +213,6 @@ path for diagnosis.
 - Package upgrades must be explicit, non-interactive, and limited to the
   declared profile unless a future full-system mode is added.
 
-## What is not implemented yet
-
-The public repository currently contains the project contract and documentation
-only. The three scripts listed above will be introduced and tested on `dev` in
-that order. The local reference scripts are preserved for comparison, but are
-not part of the published source tree.
-
 ## Branches
 
 - `dev`: integration branch for the initial refactor.
@@ -188,5 +226,6 @@ not part of the public repository or its releases.
 
 ## License
 
-No license has been selected yet. Choose one before inviting reuse or external
-contributions.
+This project is released under the [MIT License](LICENSE). You may use, copy,
+modify, distribute, sublicense, and improve it, provided that the copyright
+and license notice are retained. It is provided without warranty.
