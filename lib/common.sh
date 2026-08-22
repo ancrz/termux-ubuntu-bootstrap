@@ -15,6 +15,11 @@ declare -a RUN_ERRORS=()
 RUN_LOG=''
 RUN_NAME=''
 
+# These packages make the setup script self-hosting on a minimal Ubuntu rootfs.
+# They must be available before runtime installers can use curl, jq, tar, or
+# sha256sum. They are also part of the declared profile where appropriate.
+readonly BOOTSTRAP_PACKAGES=(ca-certificates coreutils curl jq tar)
+
 init_run() {
   RUN_NAME="$1"
   local log_dir timestamp
@@ -63,11 +68,23 @@ acquire_ubuntu_lock() {
   trap 'rmdir "${lock_dir}" 2>/dev/null || true' EXIT
 }
 
-require_commands() {
+require_apt_commands() {
+  local command
+  for command in apt-get dpkg-query; do
+    command -v "${command}" >/dev/null 2>&1 || { log_error "Required Ubuntu command missing: ${command}"; exit 1; }
+  done
+}
+
+require_runtime_commands() {
   local command
   for command in apt-get curl dpkg-query jq sha256sum tar; do
-    command -v "${command}" >/dev/null 2>&1 || { log_error "Required command missing: ${command}"; exit 1; }
+    command -v "${command}" >/dev/null 2>&1 || { log_error "Required setup dependency missing: ${command}. Run scripts/02-setup-ubuntu-base.sh first."; exit 1; }
   done
+}
+
+install_bootstrap_packages() {
+  apt-get -o DPkg::Lock::Timeout=60 install --yes "${BOOTSTRAP_PACKAGES[@]}"
+  require_runtime_commands
 }
 
 check_ubuntu_storage() {
@@ -92,7 +109,7 @@ require_ubuntu() {
 }
 
 load_profile() {
-  # shellcheck source=../config/package-profile.sh
+  # shellcheck source=config/package-profile.sh
   source "${REPO_ROOT}/config/package-profile.sh"
 }
 
@@ -122,7 +139,7 @@ ubuntu_preflight() {
   require_root
   require_ubuntu
   [[ -r "${REPO_ROOT}/config/package-profile.sh" && -r "${REPO_ROOT}/lib/runtimes.sh" ]] || { log_error 'Repository files are incomplete.'; exit 1; }
-  require_commands
+  require_apt_commands
   check_ubuntu_storage
   acquire_ubuntu_lock
 }

@@ -3,9 +3,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=../lib/common.sh
+# shellcheck source=lib/common.sh
 source "${SCRIPT_DIR}/../lib/common.sh"
-# shellcheck source=../lib/runtimes.sh
+# shellcheck source=lib/runtimes.sh
 source "${SCRIPT_DIR}/../lib/runtimes.sh"
 
 ubuntu_preflight
@@ -14,7 +14,11 @@ load_profile
 load_profile_packages
 packages=("${PROFILE_PACKAGES[@]}")
 if run_step 'Refresh Ubuntu package metadata' apt-get -o DPkg::Lock::Timeout=60 update; then
-  run_step "Reconcile ${#packages[@]} profile packages" apt-get -o DPkg::Lock::Timeout=60 install --yes "${packages[@]}" || true
+  if run_step 'Install bootstrap prerequisites' install_bootstrap_packages; then
+    run_step "Reconcile ${#packages[@]} profile packages" apt-get -o DPkg::Lock::Timeout=60 install --yes "${packages[@]}" || true
+  else
+    RUN_ERRORS+=('Profile package reconciliation skipped because bootstrap prerequisites could not be installed.')
+  fi
 else
   RUN_ERRORS+=('Profile package reconciliation skipped because APT metadata refresh failed.')
 fi

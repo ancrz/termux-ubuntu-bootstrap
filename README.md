@@ -98,7 +98,8 @@ flowchart TD
     E --> H[Login to Ubuntu PRoot]
     H --> I[Run base setup as root]
     F --> I
-    I --> J[Reconcile the declared package profile]
+    I --> Q[Install bootstrap prerequisites\ncertificates · curl · jq · tar]
+    Q --> J[Reconcile the declared package profile]
     J --> K[Ready for terminal development]
 ```
 
@@ -170,6 +171,14 @@ packages and obtains the newest version offered by the configured Ubuntu
 repositories. The updater instead uses `apt-get install --only-upgrade` over
 the already-installed packages in the same manifest. Therefore it does not add
 new utilities, recreate Ubuntu, or silently perform a whole-system upgrade.
+
+On a minimal Ubuntu rootfs, setup first installs its own bootstrap
+prerequisites (`ca-certificates`, `coreutils`, `curl`, `jq`, and `tar`) after
+refreshing APT metadata. It verifies the commands required by runtime setup
+before reconciling the broader profile, so `shellcheck` and the rest of the
+profile are reachable without assuming that `jq` was preinstalled. The updater
+continues to require a successful prior setup and reports that prerequisite
+instead of adding missing utilities implicitly.
 
 ## Stable development suite
 

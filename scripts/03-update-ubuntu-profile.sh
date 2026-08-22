@@ -3,13 +3,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=../lib/common.sh
+# shellcheck source=lib/common.sh
 source "${SCRIPT_DIR}/../lib/common.sh"
-# shellcheck source=../lib/runtimes.sh
+# shellcheck source=lib/runtimes.sh
 source "${SCRIPT_DIR}/../lib/runtimes.sh"
 
 ubuntu_preflight
 init_run 'update'
+require_runtime_commands
 load_profile
 packages=()
 while IFS= read -r package; do

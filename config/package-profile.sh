@@ -2,7 +2,7 @@
 # Shared package manifest for Ubuntu PRoot. Do not install packages here.
 
 PROFILE_BASE=(
-  bash-completion ca-certificates curl file less nano psmisc tar tree unzip
+  bash-completion ca-certificates coreutils curl file less nano psmisc tar tree unzip
   wget zip
 )
 
