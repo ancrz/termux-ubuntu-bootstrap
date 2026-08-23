@@ -92,13 +92,13 @@ flowchart TD
     B --> C[Ensure proot-distro is installed]
     C --> D{Ubuntu rootfs exists?}
     D -- No --> E[Install Ubuntu]
-    D -- Yes, without --fresh --> F[Preserve the existing rootfs]
-    D -- Yes, with --fresh --> G[Confirm and replace Ubuntu]
+    D -- "Yes, without --fresh" --> F[Preserve the existing rootfs]
+    D -- "Yes, with --fresh" --> G[Confirm and replace Ubuntu]
     G --> E
     E --> H[Login to Ubuntu PRoot]
     H --> I[Run base setup as root]
     F --> I
-    I --> Q[Install bootstrap prerequisites\ncertificates · curl · jq · tar]
+    I --> Q["Install bootstrap prerequisites\ncertificates · curl · jq · tar"]
     Q --> J[Reconcile the declared package profile]
     J --> K[Ready for terminal development]
 ```
