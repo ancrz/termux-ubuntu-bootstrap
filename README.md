@@ -13,6 +13,17 @@ environment inside Termux.** It separates the Android/Termux host from the
 Ubuntu PRoot guest: one script provisions the boundary, while the Ubuntu
 scripts install and maintain an explicit, reproducible tool profile.
 
+## Target Device & Termux Installation
+
+This environment is designed with students and accessible hardware in mind. You do not need a premium flagship device (like a Galaxy Ultra) to use it. The true target device is any capable Android smartphone or tablet that meets basic developer needs:
+
+- **Processor & Power:** A modern mid-range ARM64 processor provides enough processing power for terminal-based development and running local services.
+- **RAM:** 4GB to 6GB is sufficient for a stable PRoot Ubuntu baseline; 8GB is recommended if you plan to run heavier language servers.
+- **Subjective Protection (Thermals):** Running servers and compiling code on mobile devices can generate heat. It is recommended to use devices with reasonable thermal dissipation or avoid heavy, continuous compilations that could trigger thermal throttling.
+
+**Important Termux Notice:** 
+Due to new Android policies, the version of Termux found on the Google Play Store is **deprecated** and will cause issues. Although it might appear functional, it is not recommended. You must download and install Termux from **[F-Droid](https://f-droid.org/packages/com.termux/)** or the **[GitHub Releases](https://github.com/termux/termux-app/releases)** page to ensure unrestricted execution and proper updates.
+
 ## Script layers and flow
 
 ```mermaid
